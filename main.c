@@ -238,9 +238,35 @@ static void SocketCallback(CFSocketRef s, CFSocketCallBackType type, CFDataRef a
             extentLength++;
         }
 
-        if (should_print_message(buffer, extentLength)) {
-            printMessage(1, buffer, extentLength);
-            printSeparator(1);
+        static unsigned char should_print_result = false;
+        bool should_filter = false;
+
+        if (strnstr(buffer, "<Notice>:", 150) ||
+            strnstr(buffer, "<Info>:", 150) ||
+            strnstr(buffer, "<Error>:", 150) ||
+            strnstr(buffer, "<Warning>:", 150) ||
+            strnstr(buffer, "<Debug>:", 150))
+        {
+            should_filter = true;
+        }
+
+        if (should_filter) {
+            should_print_result = should_print_message(buffer, extentLength);
+        }
+
+        if (should_print_result) {
+            if (should_filter) {
+                static bool is_first_message = true;
+                if (!is_first_message)
+                    printSeparator(1);
+                else
+                    is_first_message = false;
+
+                printMessage(1, buffer, extentLength);
+            }
+            else {
+                write_fully(1, buffer, extentLength);
+            }
         }
 
         length -= extentLength;
